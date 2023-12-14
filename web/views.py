@@ -10,6 +10,21 @@ from django.db.models import Case, When
 from .recommendation import Myrecommend
 import numpy as np 
 import pandas as pd
+import requests
+from django.shortcuts import render
+from .models import Movie
+
+# Функция для запроса к API TMDb для поиска фильмов по тексту
+def search_movies_by_title(query):
+    api_key = 'fc418e4fcf4031275be98156963dc842'  
+    url = f'https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={query}'
+    
+    response = requests.get(url)
+    if response.status_code == 200:
+        results = response.json()
+        return results.get('results', [])  # Возвращает список результатов
+    else:
+        return None
 
 def recommend(request):
     if not request.user.is_authenticated:
@@ -114,11 +129,25 @@ def Login(request):
 			return render(request,'web/login.html',{'error_message': 'Invalid Login'})
 	return render(request,'web/login.html')
 
+def index(request):
+    movies = Movie.objects.all()
+    query = request.GET.get('q')
+    if query:
+        # Используйте функцию для поиска фильмов через API
+        movies = search_movies_by_title(query)
+        return render(request, 'web/list.html', {'movies': movies})
+    
+    return render(request, 'web/list.html', {'movies': movies})
+
+def detail(request, movie_id):
+    movie = Movie.objects.get(id=movie_id)  # Получаем информацию о фильме из базы данных или API
+    context = {
+        'movie': movie  # Передаем информацию о фильме в шаблон
+    }
+    return render(request, 'web/detail.html', context)
+
 #Logout user
 def Logout(request):
 	logout(request)
 	return redirect("login")
-
-
-
 
